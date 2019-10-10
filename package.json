@@ -10,6 +10,7 @@
   "license": "MIT",
   "devDependencies": {
     "@babel/core": "^7.6.2",
+    "@babel/plugin-transform-arrow-functions": "^7.2.0",
     "@babel/preset-env": "^7.6.2",
     "autoprefixer": "^8.5.0",
     "gulp": "^4.0.0",

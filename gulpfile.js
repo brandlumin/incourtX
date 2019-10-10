@@ -1,29 +1,30 @@
-
-// =========================================================
-// GULPFILE - PURPOSE SPECIFIC
-// =========================================================
-
-// REQUIRE SECTION -----------------------------------------
-const autoprefixer = require('autoprefixer'),
-      babel        = require('gulp-babel'),
-      concat       = require('gulp-concat'),
-      gulp         = require('gulp'),
-      livereload   = require('gulp-livereload'),
-      sass         = require('gulp-sass'),
-      sourcemaps   = require('gulp-sourcemaps'),
-      stripCSS     = require('gulp-strip-css-comments'),
-      stripJS      = require('gulp-strip-comments'),
-      postcss      = require('gulp-postcss'),
-      terser       = require('gulp-terser');
-
+/**
+ * PLUG-INS
+ */
+const { gulp, series, parallel, src, dest, watch } = require('gulp');
+const babel      = require('gulp-babel'),
+      prefix     = require('autoprefixer'),
+      concat     = require('gulp-concat'),
+      livereload = require('gulp-livereload'),
+      sass       = require('gulp-sass'),
+      sourcemaps = require('gulp-sourcemaps'),
+      stripCSS   = require('gulp-strip-css-comments'),
+      stripJS    = require('gulp-strip-comments'),
+      postcss    = require('gulp-postcss'),
+      terser     = require('gulp-terser');
+/**
+ * OPTIONS
+ */
 const terserOptions = {
                         output: {
                           beautify: false,
+                          comments: false, // default is FALSE
+                          // comments: '/^[!*]/', // default is FALSE
                           indent_level: 2,
-                          ecma: 5,
+                          ecma: 7,
                           quote_style: 0
                         },
-                        ecma: 5,
+                        ecma: 7,
                         keep_fnames: true,
                         mangle: true, // default
                         toplevel: false,
@@ -31,93 +32,52 @@ const terserOptions = {
                       };
                       // https://github.com/terser/terser#minify-options
 const babelOptions = {
-                          presets: ['@babel/env'],// compact: false,
-                          sourceType: "unambiguous"
+                          "presets": ["@babel/preset-env",{"sourceType": "unambiguous","compact":false}],
+                          "plugins": [
+                                        ["@babel/plugin-transform-arrow-functions", { "spec": true }]
+                                      ]
                       };
-// ---------------------------------------------------------
+const stripJSOptions = {safe: true, ignore: /url\([\w\s:\/=\-\+;,]*\)/g};
 
-
-
-// JS SECTION // ---------------------------------------
-gulp.task('globaljs', function () {
-  return gulp.src('src/js/global.js')
-        .pipe(sourcemaps.init())
-        .pipe(terser(terserOptions))
-        .pipe(stripJS({safe: true,
-                      ignore: /url\([\w\s:\/=\-\+;,]*\)/g}))
-        // .pipe(concat('all.js'))
-        .pipe(sourcemaps.write('.'))
-        .pipe(gulp.dest('./es6'));
-});
-gulp.task('globaljsES5', function () {
-  return gulp.src('./es6/global.js')
-        .pipe(sourcemaps.init())
-        .pipe(babel(babelOptions))
-        .pipe(sourcemaps.write('.'))
-        .pipe(gulp.dest('./es5'))
-        .pipe(livereload());
-});
-// JS SECTION // ---------------------------------------
-gulp.task('workflowjs', function () {
-  return gulp.src('src/js/dash*.js')
-        .pipe(sourcemaps.init())
-        .pipe(terser(terserOptions))
-        .pipe(stripJS({safe: true,
-                      ignore: /url\([\w\s:\/=\-\+;,]*\)/g}))
-        .pipe(concat('dash.js'))
-        .pipe(sourcemaps.write('.'))
-        .pipe(gulp.dest('./es6'));
-});
-gulp.task('workflowjsES5', function () {
-  return gulp.src('./es6/dash.js')
-        .pipe(sourcemaps.init())
-        .pipe(babel(babelOptions))
-        .pipe(sourcemaps.write('.'))
-        .pipe(gulp.dest('./es5'))
-        .pipe(livereload());
-});
-// ---------------------------------------------------------
-
-
-// SERVE SECTION // ----------------------------------------
-gulp.task('serve', function(){ // This just displayes upon run and triggers the livereload listen to changes
-  console.log(
-              '\n' + 'LiveReload Server is now listening to your changes in files...' + '\n'
-              );
+/**
+ * TASKS / FUNCTIONS
+ */
+function workScript(intended) {
+  return function script() {
+    if (intended=='src/js/glob*.js') {
+      targetFile = 'global.js';
+    } else if (intended=='src/js/dash*.js') {
+      targetFile = 'dashboard.js';
+    } else if (intended=='src/js/work*.js') {
+      targetFile = 'workflow.js';
+    }
+    return src(intended,{allowEmpty: true}) // returning ES6 files
+          .pipe(sourcemaps.init())
+          .pipe(concat(targetFile))
+          .pipe(terser(terserOptions))
+          .pipe(sourcemaps.write('.'))
+          .pipe(dest('./es6')).on('end', function() {
+            return src(intended,{allowEmpty: true}) // returning ES5 files
+            .pipe(sourcemaps.init())
+            .pipe(concat(targetFile))
+            .pipe(babel(babelOptions))
+            .pipe(stripJS(stripJSOptions))
+            .pipe(sourcemaps.write('.'))
+            .pipe(dest('./es5'));
+          })
+          .pipe(livereload()).on('end', function() {
+            console.log('Changes pushed...'+'\n');
+          });
+  };
+}
+function preFlight() {
+  console.log('Welcome Avinash!\n'+'Presets Loaded..'+'\n'+'LiveReload Server is now hawk-eyeing your changes...'+'\n');
   livereload.listen();
-});
-// ---------------------------------------------------------
+}
+function hawkEye() {
+  watch('src/js/glob*.js',series(workScript('src/js/glob*.js')));
+  watch('src/js/dash*.js',series(workScript('src/js/dash*.js')));
+  watch('src/js/work*.js',series(workScript('src/js/work*.js')));
+}
 
-
-// WATCH SECTION // ----------------------------------------
-gulp.task('watch:sass', function () {
-  // gulp.watch('src/sass/**/*.s?ss', gulp.series('workflowcss','dashcss'));
-});
-
-gulp.task('watch:js', function () {
-  gulp.watch('src/js/dash*.js', gulp.series(['workflowjs','workflowjsES5']));
-  gulp.watch('src/js/global.js', gulp.series(['globaljs','globaljsES5']));
-});
-
-gulp.task('watch:frontend', function () {
-  gulp.watch(['**/*.html','**/*.php']).on('change', livereload.reload);
-});
-
-gulp.task('watch', gulp.parallel('watch:sass','watch:js','watch:frontend'));
-// ---------------------------------------------------------
-
-
-
-// REQUIRE SECTION // --------------------------------------
-gulp.task('default', gulp.series(
-                                 'workflowjs',
-                                 'workflowjsES5',
-                                 'globaljs',
-                                 'globaljsES5',
-                                  gulp.parallel(
-                                                'watch',
-                                                'serve'
-                                                )
-                                )
-);
-// ---------------------------------------------------------
+exports.default = parallel(preFlight, hawkEye);
