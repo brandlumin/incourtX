@@ -124,6 +124,7 @@ public/
 *.tmlanguage.cache
 *.tmPreferences.cache
 *.stTheme.cache
+*.sublime-gulp*
 
 # Workspace files are user-specific
 *.sublime-workspace
