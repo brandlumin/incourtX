@@ -66,7 +66,7 @@ function workScript(intendedJS) {
             .pipe(terser(terserOptions))
             .pipe(stripJS(stripJSOptions))
             .pipe(sourcemaps.write("."))
-            .pipe(dest("./dist/js/es6")).on("end", function() {
+            .pipe(dest("./dist/js/es6")).on("finish", function() {
               return src(intendedJS,{allowEmpty: true}) // returning ES5 files
                       .pipe(sourcemaps.init())
                       .pipe(concat(targetFile))
@@ -76,7 +76,7 @@ function workScript(intendedJS) {
                       .pipe(dest("./dist/js/es5"));
                       // .pipe(livereload()); // to push es5 into the browser
             })
-            .pipe(livereload().on("end", function() {console.log("worked on:",intendedJS," -- Changes pushed...");}));
+            .pipe(livereload().on("finish", function() {console.log("worked on:",intendedJS," -- Changes pushed...");}));
   };
 }
 
@@ -89,8 +89,10 @@ function workSass(intendedSASS) {
             .pipe(postcss(postcssOptions))
             .pipe(stripCSS({preserve: /^!|@|#/}))
             .pipe(sourcemaps.write("."))
-            .pipe(dest("./dist/styles"))
-            .pipe(livereload().on("end", function() {console.log("worked on:",intendedSASS," -- Changes pushed...");}));
+            .pipe(dest("./dist/styles").on("finish", ()=> {
+              console.log("Worked on",intendedSASS,"Pushing the changes...");
+              livereload.reload();
+            }));
   };
 }
 
@@ -104,8 +106,9 @@ function hawkEye() {
   watch("src/js/dash*.js",workScript("src/js/dash*.js"));
   watch("src/js/work*.js",workScript("src/js/work*.js"));
   watch(["src/sass/bootstrap431/**/*.*"], workSass("src/sass/bootstrap431/bootstrap.scss"));
-  watch(["src/sass/dashboard.sass","src/sass/dashboard/**/*.*"], workSass("src/sass/dashboard.sass"));
-  watch(["src/sass/workflow.sass","src/sass/workflow/**/*.*"], workSass("src/sass/workflow.sass"));
+  watch(["src/sass/dashboard.sass","src/sass/dashboard/**/*.s*"], workSass("src/sass/dashboard.sass"));
+  watch(["src/sass/workflow.sass","src/sass/workflow/**/*.s*"], workSass("src/sass/workflow.sass"));
+  watch(["src/sass/site.sass","src/sass/modules/**/*.s*"], workSass("src/sass/incourt.sass"));
 }
 
 exports.default = series(
@@ -114,6 +117,7 @@ exports.default = series(
                                   workScript("src/js/dash*.js"),
                                   workScript("src/js/work*.js"),
                                   workSass("src/sass/bootstrap431/bootstrap.scss"),
+                                  workSass("src/sass/incourt.sass"),
                                   workSass("src/sass/dashboard.sass"),
                                   workSass("src/sass/workflow.sass")
                          ),
