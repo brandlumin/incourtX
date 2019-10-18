@@ -32,7 +32,7 @@ const terserOptions = {
                       };
                       // https://github.com/terser/terser#minify-options
 const babelOptions = {
-                          "presets": ["@babel/preset-env",{"sourceType": "unambiguous","compact":false}],
+                          "presets": ["@babel/preset-env",{"sourceType": "unambiguous","compact":true}],
                           "plugins": [
                                         ["@babel/plugin-transform-arrow-functions", { "spec": true }]
                                       ]
@@ -64,7 +64,7 @@ function workScriptES5(intendedJS) {
           .pipe(sourcemaps.init())
           .pipe(concat(targetFile))
           .pipe(babel(babelOptions))
-          .pipe(stripJS(stripJSOptions))
+          // .pipe(stripJS(stripJSOptions))
           .pipe(sourcemaps.write("."))
           .pipe(dest("./dist/js/es5").on("finish", ()=> {
               // console.log("Worked on Script ES5:",targetFile.toUpperCase(),"...saved.");
@@ -86,7 +86,7 @@ function workScriptES6(intendedJS) {
             .pipe(sourcemaps.init())
             .pipe(concat(targetFile))
             .pipe(terser(terserOptions))
-            .pipe(stripJS(stripJSOptions))
+            // .pipe(stripJS(stripJSOptions))
             .pipe(sourcemaps.write("."))
             .pipe(dest("./dist/js/es6").on("finish", ()=> {
               console.log("Worked on Script ES6:",targetFile.toUpperCase(),"...saved.");
@@ -103,14 +103,14 @@ function workSass(intendedSASS) {
             .pipe(postcss(postcssOptions))
             .pipe(stripCSS({preserve: /^!|@|#/}))
             .pipe(sourcemaps.write("."))
-            .pipe(dest("./dist/styles"))
-            /*.pipe(livereload().on("end", ()=> {
-              console.log("Worked on Styles:",intendedSASS.match(/[.\w*]+$/g)[0].toUpperCase(),"...stored. Changes pushed.");
-            }));*/
             .pipe(dest("./dist/styles").on("finish", ()=> {
               livereload.reload();
               console.log("Worked on Styles:",intendedSASS.match(/[.\w*]+$/g)[0].toUpperCase(),"...stored. Changes pushed.");
             }));
+            /*.pipe(dest("./dist/styles"))
+            .pipe(livereload().on("end", ()=> {
+              console.log("Worked on Styles:",intendedSASS.match(/[.\w*]+$/g)[0].toUpperCase(),"...stored. Changes pushed.");
+            }));*/
   };
 }
 
