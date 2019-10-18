@@ -49,8 +49,10 @@ const postcssOptions = [ prefix({browsers: ["> 0.01% in IN", "iOS 4"], grid: tru
 /**
  * TASKS / FUNCTIONS
  */
-function workScript(intendedJS) {
-  return function script() {
+
+function workScriptES5(intendedJS) {
+  return function scriptES5() {
+    // console.log("Starting ES5:",intendedJS.match(/[.\w*]+$/g)[0].toUpperCase(),"...");
     if (intendedJS=="src/js/glob*.js") {
       targetFile = "global.js";
     } else if (intendedJS=="src/js/dash*.js") {
@@ -58,40 +60,56 @@ function workScript(intendedJS) {
     } else if (intendedJS=="src/js/work*.js") {
       targetFile = "workflow.js";
     }
-    // console.log(intendedJS);
-    // console.log(targetFile);
+    return src(intendedJS,{allowEmpty: true}) // returning ES5 files
+          .pipe(sourcemaps.init())
+          .pipe(concat(targetFile))
+          .pipe(babel(babelOptions))
+          .pipe(stripJS(stripJSOptions))
+          .pipe(sourcemaps.write("."))
+          .pipe(dest("./dist/js/es5").on("finish", ()=> {
+              // console.log("Worked on Script ES5:",targetFile.toUpperCase(),"...saved.");
+            }));
+  };
+}
+
+function workScriptES6(intendedJS) {
+  return function scriptES6() {
+    console.log("Starting ES6:",intendedJS.match(/[.\w*]+$/g)[0].toUpperCase(),"...");
+    if (intendedJS=="src/js/glob*.js") {
+      targetFile = "global.js";
+    } else if (intendedJS=="src/js/dash*.js") {
+      targetFile = "dashboard.js";
+    } else if (intendedJS=="src/js/work*.js") {
+      targetFile = "workflow.js";
+    }
     return src(intendedJS,{allowEmpty: true}) // returning ES6 files
             .pipe(sourcemaps.init())
             .pipe(concat(targetFile))
             .pipe(terser(terserOptions))
             .pipe(stripJS(stripJSOptions))
             .pipe(sourcemaps.write("."))
-            .pipe(dest("./dist/js/es6")).on("finish", function() {
-              return src(intendedJS,{allowEmpty: true}) // returning ES5 files
-                      .pipe(sourcemaps.init())
-                      .pipe(concat(targetFile))
-                      .pipe(babel(babelOptions))
-                      .pipe(stripJS(stripJSOptions))
-                      .pipe(sourcemaps.write("."))
-                      .pipe(dest("./dist/js/es5"));
-                      // .pipe(livereload()); // to push es5 into the browser
-            })
-            .pipe(livereload().on("finish", function() {console.log("worked on:",intendedJS," -- Changes pushed...");}));
+            .pipe(dest("./dist/js/es6").on("finish", ()=> {
+              console.log("Worked on Script ES6:",targetFile.toUpperCase(),"...saved.");
+            }));
   };
 }
 
 function workSass(intendedSASS) {
   return function style() {
-    // console.log("working on:",intendedSASS);
+    console.log("Starting:",intendedSASS.match(/[.\w*]+$/g)[0].toUpperCase(),"...");
     return src(intendedSASS, {allowEmpty: true})
             .pipe(sourcemaps.init())
             .pipe(sass(sassOptions).on("error", sass.logError)) // ALSO https://github.com/sass/node-sass#render-callback--v300
             .pipe(postcss(postcssOptions))
             .pipe(stripCSS({preserve: /^!|@|#/}))
             .pipe(sourcemaps.write("."))
+            .pipe(dest("./dist/styles"))
+            /*.pipe(livereload().on("end", ()=> {
+              console.log("Worked on Styles:",intendedSASS.match(/[.\w*]+$/g)[0].toUpperCase(),"...stored. Changes pushed.");
+            }));*/
             .pipe(dest("./dist/styles").on("finish", ()=> {
-              console.log("Worked on",intendedSASS,"Pushing the changes...");
               livereload.reload();
+              console.log("Worked on Styles:",intendedSASS.match(/[.\w*]+$/g)[0].toUpperCase(),"...stored. Changes pushed.");
             }));
   };
 }
@@ -102,24 +120,32 @@ function serveUp() {
 }
 
 function hawkEye() {
-  watch("src/js/glob*.js",workScript("src/js/glob*.js"));
-  watch("src/js/dash*.js",workScript("src/js/dash*.js"));
-  watch("src/js/work*.js",workScript("src/js/work*.js"));
-  watch(["src/sass/bootstrap431/**/*.*"], workSass("src/sass/bootstrap431/bootstrap.scss"));
-  watch(["src/sass/dashboard.sass","src/sass/dashboard/**/*.s*"], workSass("src/sass/dashboard.sass"));
-  watch(["src/sass/workflow.sass","src/sass/workflow/**/*.s*"], workSass("src/sass/workflow.sass"));
-  watch(["src/sass/site.sass","src/sass/modules/**/*.s*"], workSass("src/sass/incourt.sass"));
+  watch("src/js/glob*.js",parallel(workScriptES5("src/js/glob*.js"),workScriptES6("src/js/glob*.js")));
+  watch("src/js/dash*.js",parallel(workScriptES5("src/js/dash*.js"),workScriptES6("src/js/dash*.js")));
+  watch("src/js/work*.js",parallel(workScriptES5("src/js/work*.js"),workScriptES6("src/js/work*.js")));
+  watch("dist/js/es6/*.js").on('change', function(path, stats) {livereload.reload(path);});
+  // SASS FILES FROZEN SINCE THEY ARE READY. THEREFORE EXCLUDED IN THIS DEV.
 }
 
 exports.default = series(
-                         parallel(
-                                  workScript("src/js/glob*.js"),
-                                  workScript("src/js/dash*.js"),
-                                  workScript("src/js/work*.js"),
-                                  workSass("src/sass/bootstrap431/bootstrap.scss"),
-                                  workSass("src/sass/incourt.sass"),
-                                  workSass("src/sass/dashboard.sass"),
-                                  workSass("src/sass/workflow.sass")
-                         ),
-                         parallel(serveUp,hawkEye)
-                         );
+                         // scripts
+                        parallel(workScriptES5("src/js/glob*.js"),workScriptES6("src/js/glob*.js")),
+                        parallel(workScriptES5("src/js/dash*.js"),workScriptES6("src/js/dash*.js")),
+                        parallel(workScriptES5("src/js/work*.js"),workScriptES6("src/js/work*.js")),
+                        //styles
+                        workSass("src/sass/bootstrap431/bootstrap.scss"),
+                        workSass("src/sass/mycss.sass"), // oldSetupFiles
+                        workSass("src/sass/dashboard.sass"), // oldSetupFiles
+                        // serving and watching
+                        parallel(serveUp,hawkEye)
+                        );
+exports.SASS = series(
+                      workSass("src/sass/bootstrap431/bootstrap.scss"),
+                      workSass("src/sass/mycss.sass"), // oldSetupFiles
+                      workSass("src/sass/dashboard.sass") // oldSetupFiles
+                      );
+exports.JS = series(
+                    parallel(workScriptES5("src/js/glob*.js"),workScriptES6("src/js/glob*.js")),
+                    parallel(workScriptES5("src/js/dash*.js"),workScriptES6("src/js/dash*.js")),
+                    parallel(workScriptES5("src/js/work*.js"),workScriptES6("src/js/work*.js"))
+                    );
