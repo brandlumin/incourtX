@@ -1,17 +1,17 @@
 /**
  * PLUG-INS
  */
-const { gulp, series, parallel, src, dest, watch } = require("gulp");
-const babel      = require("gulp-babel"),
-      prefix     = require("autoprefixer"),
-      concat     = require("gulp-concat"),
-      livereload = require("gulp-livereload"),
-      sass       = require("gulp-sass"),
-      sourcemaps = require("gulp-sourcemaps"),
-      stripCSS   = require("gulp-strip-css-comments"),
-      stripJS    = require("gulp-strip-comments"),
-      postcss    = require("gulp-postcss"),
-      terser     = require("gulp-terser");
+const { gulp, series, parallel, src, dest, watch } = require("gulp"),
+      babel                                        = require("gulp-babel"),
+      prefix                                       = require("autoprefixer"),
+      concat                                       = require("gulp-concat"),
+      livereload                                   = require("gulp-livereload"),
+      sass                                         = require("gulp-sass"),
+      sourcemaps                                   = require("gulp-sourcemaps"),
+      stripCSS                                     = require("gulp-strip-css-comments"),
+      // stripJS                                   = require("gulp-strip-comments"),
+      postcss                                      = require("gulp-postcss"),
+      terser                                       = require("gulp-terser");
 /**
  * OPTIONS
  */
@@ -19,7 +19,7 @@ const terserOptions = {
                         output: {
                           beautify: false,
                           comments: false, // default is FALSE
-                          // comments: "/^[!*]/", // default is FALSE
+                          // comments: "/^[!*]/", // this is to prevent important comments.
                           indent_level: 2,
                           ecma: 7,
                           quote_style: 0
@@ -32,7 +32,7 @@ const terserOptions = {
                       };
                       // https://github.com/terser/terser#minify-options
 const babelOptions = {
-                          "presets": ["@babel/preset-env",{"sourceType": "unambiguous","compact":true}],
+                          "presets": ["@babel/preset-env",{"sourceType": "unambiguous","compact": "auto" /*default*/, "comments" : false}],
                           "plugins": [
                                         ["@babel/plugin-transform-arrow-functions", { "spec": true }]
                                       ]
@@ -42,7 +42,7 @@ const sassOptions = {
                   errLogToConsole: true,
                   // linefeed: "lf",
                   precision: 10,
-                  outputStyle: "compressed" //"nested" //"compressed""
+                  outputStyle: "compressed" //"nested" 
                   };
 const postcssOptions = [ prefix({browsers: ["> 0.01% in IN", "iOS 4"], grid: true}) ];
 
